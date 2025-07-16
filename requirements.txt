@@ -1,0 +1,11 @@
+pandas
+numpy
+torch
+datasets
+scikit-learn
+tqdm
+flask
+werkzeug
+langdetect
+regex
+gunicorn
