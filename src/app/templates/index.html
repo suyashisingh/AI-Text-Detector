@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Text Detector</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="center-wrap">
+    <div class="themed-card">
+
+        <!-- Theme Toggle -->
+        <button id="theme-toggle" class="toggle-btn">Toggle Theme</button>
+
+        <h1 class="title">AI Text Detector</h1>
+
+        <!-- Form: Upload or Enter Text -->
+        <form method="post" enctype="multipart/form-data">
+            <div class="input-section">
+                <label>Upload a text file:</label>
+                <input type="file" id="file" name="file" accept=".txt">
+            </div>
+
+            <div class="or-separator">OR</div>
+
+            <div class="input-section">
+                <label for="text">Enter text:</label>
+                <textarea id="text" name="text">{{ input_text }}</textarea>
+            </div>
+
+            <button class="analyze-btn" type="submit">Analyze</button>
+        </form>
+
+        <!-- File error -->
+        {% if file_error %}
+            <div class="predict-box error">{{ file_error }}</div>
+        {% endif %}
+
+        <!-- Prediction Result / Metrics -->
+        {% if result %}
+            <div class="predict-box" id="result-text">{{ result }}</div>
+
+            <div class="metrics-box">
+                <p><strong>📏 Word Count:</strong> {{ metrics.word_count }}</p>
+                <p><strong>🌍 Detected Language:</strong>
+    {% if metrics.language == 'en' %}ENGLISH{% elif metrics.language == 'Unknown' %}Unknown{% else %}{{ metrics.language|upper }}{% endif %}
+</p>
+
+                {% if metrics.ai_flags %}
+                    <p><strong>⚠️ Flagged AI Patterns:</strong></p>
+                    <ul>
+                        {% for flag in metrics.ai_flags %}
+                        <li>{{ flag }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p><span style="color:green;">✅ No obvious AI patterns detected.</span></p>
+                {% endif %}
+            </div>
+
+            <!-- 🕒 Past Results -->
+            {% if past_results and past_results|length > 0 %}
+                <div class="past-results-box">
+                    <h3>Past Results This Session</h3>
+                    <ul>
+                    {% for item in past_results %}
+                        <li>
+                            <div><b>{{ item.date }}</b></div>
+                            <div style="color:#5e86c7;">{{ item.result }}</div>
+                            <div><em>Words: {{ item.metrics.word_count }}, Lang: {{ item.metrics.language|upper }}</em></div>
+                            <div style="font-size: 0.97em; color:#8087a3; margin-bottom:6px;">
+                                <span title="{{ item.input }}">{{ item.input }}</span>
+                            </div>
+                        </li>
+                    {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            <!-- Copy & Download Buttons -->
+            <div class="action-row">
+                <button class="util-btn" type="button" onclick="copyResult()">Copy Result</button>
+                <button class="util-btn" type="button" onclick="downloadResult('txt')">Download as TXT</button>
+                <button class="util-btn" type="button" onclick="downloadResult('pdf')">Download as PDF</button>
+            </div>
+            <div id="copy-msg" class="copy-msg" style="display:none;">Copied!</div>
+        {% endif %}
+
+    </div>
+</div>
+
+<!-- Theme toggle JS -->
+<script>
+document.getElementById('theme-toggle').onclick = function() {
+    document.body.classList.toggle('theme-custom');
+    if(document.body.classList.contains('theme-custom')) {
+        localStorage.setItem('theme', 'custom');
+    } else {
+        localStorage.setItem('theme', 'light');
+    }
+};
+window.onload = function() {
+    if(localStorage.getItem('theme') === 'custom') {
+        document.body.classList.add('theme-custom');
+    }
+};
+</script>
+
+<!-- Copy & Download script -->
+<script>
+function copyResult() {
+    const resultText = document.getElementById("result-text");
+    if (resultText) {
+        navigator.clipboard.writeText(resultText.innerText)
+            .then(() => { showCopyMsg(); })
+            .catch((err) => { alert('Copy failed: ' + err); });
+    }
+}
+function showCopyMsg() {
+    const msg = document.getElementById("copy-msg");
+    msg.style.display = 'block';
+    msg.style.opacity = 1;
+    setTimeout(() => {
+        msg.style.opacity = 0;
+        setTimeout(() => { msg.style.display = 'none'; }, 200);
+    }, 1000);
+}
+function downloadResult(type) {
+    const resultText = document.getElementById("result-text").innerText;
+    const dateStr = new Date().toLocaleString();
+    let filename = "prediction_result_" + Date.now();
+    if (type === 'txt') {
+        const blob = new Blob([resultText + "\n\nChecked at: " + dateStr], { type: "text/plain" });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename + ".txt";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } else if (type === 'pdf') {
+        const win = window.open('', '', 'height=500,width=400');
+        win.document.write('<html><head><title>Prediction Result</title></head><body>');
+        win.document.write(`<h2>Prediction Result</h2><pre style="font-size:1.1em;">${resultText}</pre>`);
+        win.document.write(`<p><em>Checked at:&nbsp;${dateStr}</em></p>`);
+        win.document.write('</body></html>');
+        win.document.close();
+        win.print();
+    }
+}
+</script>
+
+</body>
+</html>
